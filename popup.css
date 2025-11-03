@@ -1,0 +1,61 @@
+#gmail-summary-popup {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 300px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+    font-family: Arial, sans-serif;
+  }
+  
+  .popup-content {
+    padding: 0;
+  }
+  
+  .popup-header {
+    background: #4285f4;
+    color: white;
+    padding: 12px 15px;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .popup-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: bold;
+  }
+  
+  .close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+  }
+  
+  .popup-body {
+    padding: 15px;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  
+  .popup-body p {
+    margin: 5px 0;
+  }
