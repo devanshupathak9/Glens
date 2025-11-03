@@ -2,37 +2,40 @@
 let isProcessing = false;
 
 // Listen for messages from content script
-chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'generateSummary' && !isProcessing) {
     isProcessing = true;
-    
-    try {
-      console.log('🎯 Processing emails for AI summary...');
-      console.log('📊 Emails found:', message.emailCount);
-      
-      let summary;
-      const emailData = message.emailData;
 
-      if (await isGeminiNanoAvailable()) {
-        console.log('🤖 Using Gemini Nano for AI summarization...');
-        summary = await summarizeWithGeminiNano(emailData);
-      } else {
-        console.log('📊 Using smart text summarization...');
-        summary = createSmartSummary(emailData);
+    (async () => {
+      try {
+        console.log('🎯 Processing emails for AI summary...');
+        console.log('📊 Emails found:', message.emailCount);
+
+        let summary;
+        const emailData = message.emailData;
+
+        if (await isGeminiNanoAvailable()) {
+          console.log('🤖 Using Gemini Nano for AI summarization...');
+          summary = await summarizeWithGeminiNano(emailData);
+        } else {
+          console.log('📊 Using smart text summarization...');
+          summary = createSmartSummary(emailData);
+        }
+
+        sendResponse({ summary });
+      } catch (error) {
+        console.error('❌ Summarization failed:', error);
+        const fallback = createFallbackSummary(message.emailData);
+        sendResponse({ summary: fallback });
+      } finally {
+        isProcessing = false;
       }
+    })();
 
-      sendResponse({ summary });
-    } catch (error) {
-      console.error('❌ Summarization failed:', error);
-      const fallback = createFallbackSummary(message.emailData);
-      sendResponse({ summary: fallback });
-    } finally {
-      isProcessing = false;
-    }
-    
-    return true; // Keep message channel open for async response
+    return true; // ✅ This now properly keeps the port open
   }
 });
+
 
 async function isGeminiNanoAvailable() {
   try {
