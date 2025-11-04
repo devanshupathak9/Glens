@@ -1,23 +1,30 @@
 {
-    "manifest_version": 3,
-    "name": "Gmail Summary Extension",
-    "version": "1.0",
-    "description": "Automatically shows summary popup on Gmail pages",
-    "permissions": ["activeTab"],
-    "content_scripts": [
-      {
-        "matches": ["https://mail.google.com/*"],
-        "js": ["content.js"],
-        "css": ["popup.css"]
-      }
-    ],
+  "manifest_version": 3,
+  "name": "Gmail Summary Extension",
+  "version": "1.0",
+  "description": "Automatically shows summary popup on Gmail pages",
+  "permissions": ["activeTab"],
+  
+  "icons": {
+    "128": "icon.png"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["content.js"],
+      "css": ["popup.css"]
+    }
+  ],
+  
   "background": {
     "service_worker": "background.js"
   },
-    "web_accessible_resources": [
-      {
-        "resources": ["popup.html"],
-        "matches": ["https://mail.google.com/*"]
-      }
-    ]
-  }
+  
+  "web_accessible_resources": [
+    {
+      "resources": ["popup.html"],
+      "matches": ["https://mail.google.com/*"]
+    }
+  ]
+}
