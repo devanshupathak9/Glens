@@ -1,3 +1,7 @@
+let popupCloseTimeout;
+let isPopupHovered = false;
+const POPUP_TIMEOUT_MS = 10000; // 10 seconds
+
 // Wait for the page to load
 window.addEventListener('load', function() {
   setTimeout(initializeExtension, 4000); // Increased delay for Gmail to fully load
@@ -238,6 +242,11 @@ function createPopup(summaryText, emailCount = 0, isLoading = false) {
   if (existingPopup) {
     existingPopup.remove();
   }
+
+  // Clear any existing timeout
+  if (popupCloseTimeout) {
+    clearTimeout(popupCloseTimeout);
+  }
   
   const popup = document.createElement('div');
   popup.id = 'gmail-summary-popup';
@@ -266,17 +275,69 @@ function createPopup(summaryText, emailCount = 0, isLoading = false) {
   
   document.body.appendChild(popup);
   
+    // Add hover event listeners
+  setupPopupHoverEvents(popup);
+
   const closeBtn = popup.querySelector('.close-btn');
   closeBtn.addEventListener('click', function() {
-    popup.remove();
+    removePopup();
   });
-  
+
   if (!isLoading) {
-    setTimeout(() => {
-      if (document.body.contains(popup)) {
-        popup.remove();
+    // Start the auto-close timeout
+    startPopupTimeout();
+  }
+
+  return popup;
+}
+
+function setupPopupHoverEvents(popup) {
+  // Reset hover state
+  isPopupHovered = false;
+
+  // Mouse enter event - user is hovering over popup
+  popup.addEventListener('mouseenter', function() {
+    console.log('🐭 Popup hover started');
+    isPopupHovered = true;
+    
+    // Clear any existing timeout when user hovers
+    if (popupCloseTimeout) {
+      clearTimeout(popupCloseTimeout);
+      console.log('⏹️ Auto-close paused (user hovering)');
+    }
+  });
+
+  // Mouse leave event - user moved away from popup
+  popup.addEventListener('mouseleave', function() {
+    console.log('🐭 Popup hover ended');
+    isPopupHovered = false;
+    
+    // Restart the timeout when user moves away
+    startPopupTimeout();
+  });
+}
+
+function startPopupTimeout() {
+  // Clear any existing timeout
+  if (popupCloseTimeout) {
+    clearTimeout(popupCloseTimeout);
+  }
+
+  // Only start timeout if popup is not being hovered
+  if (!isPopupHovered) {
+    console.log('⏰ Auto-close timer started:', POPUP_TIMEOUT_MS + 'ms');
+    
+    popupCloseTimeout = setTimeout(() => {
+      const popup = document.getElementById('gmail-summary-popup');
+      if (popup && document.body.contains(popup) && !isPopupHovered) {
+        console.log('⏰ Auto-close triggered');
+        removePopup();
+      } else if (isPopupHovered) {
+        console.log('⏰ Auto-close skipped (user still hovering)');
+        // Try again in 10 seconds if user is still hovering
+        setTimeout(startPopupTimeout, 10000);
       }
-    }, 30000);
+    }, POPUP_TIMEOUT_MS);
   }
 }
 
@@ -294,15 +355,22 @@ function formatSummary(text) {
   }).join('');
 }
 
-// Navigation observer
 new MutationObserver(() => {
   const url = location.href;
   if (url !== lastUrl) {
     lastUrl = url;
+    
+    // Clear timeout and remove popup on navigation
+    if (popupCloseTimeout) {
+      clearTimeout(popupCloseTimeout);
+      popupCloseTimeout = null;
+    }
+    isPopupHovered = false;
+    
     const existingPopup = document.getElementById('gmail-summary-popup');
     if (existingPopup) {
       existingPopup.remove();
     }
-    setTimeout(initializeExtension, 3000);
+    setTimeout(initializeExtension, 2000);
   }
 }).observe(document, {subtree: true, childList: true});
