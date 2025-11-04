@@ -5,38 +5,62 @@ window.addEventListener('load', function() {
 
 let lastUrl = location.href;
 
+function getCurrentView() {
+  if (lastUrl.endsWith('#inbox') || lastUrl.endsWith('/#inbox')) {
+    return 'INBOX_VIEW';
+  } else {
+    return 'EMAIL_VIEW';
+  }
+}
+
+
 function initializeExtension() {
   console.log('🔍 Starting Gmail Summary Extension...');
-  
-  extractImportantEmails().then(emailData => {
+
+  const currentView = getCurrentView();
+  console.log('Current view:', currentView);
+
+  extractImportantEmails(currentView).then(emailData => {
     console.log('📧 Emails found:', emailData);
     
     if (emailData && emailData.length > 0) {
-      // Show loading state
-      createPopup('Analyzing ' + emailData.length + ' emails with AI...', emailData.length, true);
+      const loadingMessage = currentView === 'INBOX_VIEW' 
+        ? `Analyzing ${emailData.length} inbox emails with AI...`
+        : `Analyzing this email with AI...`;
       
-      // Send to background script for AI processing
+      createPopup(loadingMessage, emailData.length, true, currentView);
+      
       chrome.runtime.sendMessage({
         action: 'generateSummary',
+        currentView: currentView,
         emailData: formatEmailData(emailData),
         emailCount: emailData.length
       }, (response) => {
-        if (response && response.summary) {
-          createPopup(response.summary, emailData.length);
+        if (response?.summary) {
+          createPopup(response.summary, emailData.length, false, currentView);
         } else {
-          createPopup('Analysis complete. ' + (response?.error || 'Try refreshing the page.'), emailData.length);
+          const errorMessage = `Analysis complete. ${response?.error || 'Try refreshing the page.'}`;
+          createPopup(errorMessage, emailData.length, false, currentView);
         }
       });
     } else {
-      createPopup('No important emails detected. The extension looks for emails about deliveries, flights, meetings, etc. Try checking your main inbox.', 0);
+      const noEmailsMessage = currentView === 'INBOX_VIEW'
+        ? 'No important emails detected in inbox. The extension looks for emails about deliveries, flights, meetings, etc.'
+        : 'No email content detected. Make sure you have an email open.';
+      
+      createPopup(noEmailsMessage, 0, false, currentView);
     }
   }).catch(error => {
     console.error('Error extracting emails:', error);
-    createPopup('Having trouble accessing your emails. Make sure you\'re on Gmail and try refreshing the page.');
-  });
+    const errorMessage = currentView === 'INBOX_VIEW'
+      ? 'Having trouble accessing your inbox. Make sure you\'re on Gmail and try refreshing the page.'
+      : 'Having trouble reading this email. Try refreshing the page.';
+    
+    createPopup(errorMessage, 0, false, currentView);
+});
 }
 
-function createPopup(summaryText, emailCount = 0, isLoading = false) {
+function createPopup(summaryText, emailCount = 0, isLoading = false, currentView) {
   const existingPopup = document.getElementById('gmail-summary-popup');
   if (existingPopup) {
     existingPopup.remove();
@@ -45,13 +69,24 @@ function createPopup(summaryText, emailCount = 0, isLoading = false) {
   const popup = document.createElement('div');
   popup.id = 'gmail-summary-popup';
   
-  const headerText = isLoading ? 
-    '🤖 Analyzing Emails...' : 
-    (emailCount > 0 ? `🤖 Gmail Summary (${emailCount} emails)` : '🤖 Gmail Summary');
+  let headerText;
+  if (isLoading) {
+    headerText = currentView === 'INBOX_VIEW' ? '🤖 Scanning Inbox...' : '🤖 Reading Email...';
+  } else {
+    if (currentView === 'INBOX_VIEW') {
+      headerText = emailCount > 0 ? `🤖 Inbox Summary (${emailCount} emails)` : '🤖 Inbox Summary';
+    } else {
+      headerText = '🤖 Email Summary';
+    }
+  }
+  
+  const loadingMessage = currentView === 'INBOX_VIEW' 
+    ? 'Scanning your inbox for important emails...' 
+    : 'Reading this email content...';
   
   popup.innerHTML = `
     <div class="popup-content">
-      <div class="popup-header">
+      <div class="popup-header ${currentView?.toLowerCase()}"> <!-- ✅ Add view class -->
         <h3>${headerText}</h3>
         <div class="header-controls">
           <button class="collapse-btn" title="Collapse">−</button>
@@ -60,10 +95,10 @@ function createPopup(summaryText, emailCount = 0, isLoading = false) {
       </div>
       <div class="popup-body">
         ${isLoading ? 
-          '<div class="loading">Scanning your emails for important events...</div>' : 
+          `<div class="loading">${loadingMessage}</div>` : 
           `<div class="summary-content">${formatSummary(summaryText)}</div>
            <div class="popup-footer">
-             <small>Powered by Gemini Nano • ${new Date().toLocaleTimeString()}</small>
+             <small>Powered by AI • ${new Date().toLocaleTimeString()}</small>
            </div>`
         }
       </div>
@@ -119,10 +154,19 @@ function createPopup(summaryText, emailCount = 0, isLoading = false) {
   }
 }
 
-function extractImportantEmails() {
+function extractImportantEmails(currentView) {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
       try {
+        if (currentView === 'EMAIL_VIEW') {
+          const currentEmail = extractCurrentEmailContent();
+          if (currentEmail) {
+            resolve([currentEmail]);
+          } else {
+            resolve([]);
+          }
+          return;
+        }
         const importantEmails = [];
         
         // Multiple strategies to find emails
@@ -179,6 +223,64 @@ function extractImportantEmails() {
       }
     }, 1500);
   });
+}
+
+function extractCurrentEmailContent() {
+  try {
+    // Gmail specific selectors for opened email
+    const emailSelectors = [
+      '.a3s', // Gmail email body
+      '[role="main"] .ii', // Email content
+      '.gs', // Email container
+      '.hx', // Email thread
+      '[data-message-id]' // Message container
+    ];
+    
+    let emailContent = '';
+    let contentElement = null;
+    
+    // Find the email content element
+    for (const selector of emailSelectors) {
+      const element = document.querySelector(selector);
+      if (element && element.textContent.trim().length > 0) {
+        emailContent = element.textContent.trim();
+        contentElement = element;
+        break;
+      }
+    }
+    
+    if (!emailContent) {
+      console.log('No email content found');
+      return null;
+    }
+    
+    // Get email subject
+    const subjectElement = document.querySelector('h2[data-thread-perm-id]') || 
+                          document.querySelector('[data-thread-perm-id] h2') ||
+                          document.querySelector('h2');
+    const subject = subjectElement ? subjectElement.textContent.trim() : 'No subject';
+    
+    // Get sender information
+    const senderElement = document.querySelector('.gD') || 
+                         document.querySelector('[email]') ||
+                         document.querySelector('.go');
+    const sender = senderElement ? senderElement.textContent.trim() : 'Unknown sender';
+    
+    console.log('📧 Extracted current email:', { subject, sender, contentLength: emailContent.length });
+    
+    return {
+      subject: subject,
+      sender: sender,
+      content: emailContent.substring(0, 5000), // Limit content length
+      timestamp: new Date().toISOString(),
+      isImportant: true, // Assume current opened email is important
+      isCurrentEmail: true // Flag to identify this is the current email
+    };
+    
+  } catch (error) {
+    console.error('Error extracting current email content:', error);
+    return null;
+  }
 }
 
 function extractEmailData(emailElement) {
@@ -306,14 +408,18 @@ function isRecentEmail(emailData) {
 }
 
 function formatEmailData(emailData) {
-  return emailData.map((email, index) => 
-    `EMAIL ${index + 1}:
+  return emailData.map((email, index) => {
+    const date = email.date || email.timestamp || new Date().toISOString();
+    const content = email.content || email.snippet || 'No content available';
+    const currentEmailFlag = email.isCurrentEmail ? '[CURRENTLY OPENED EMAIL]' : '';
+    
+    return `EMAIL ${index + 1}:
 FROM: ${email.sender}
 SUBJECT: ${email.subject}
-DATE: ${email.date}
-PREVIEW: ${email.snippet}
----`
-  ).join('\n');
+DATE: ${date}
+CONTENT: ${content.substring(0, 1000)}...${currentEmailFlag}
+---`;
+  }).join('\n');
 }
 
 function formatSummary(text) {
