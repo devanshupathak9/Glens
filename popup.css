@@ -24,6 +24,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  cursor: default;
+}
+
+.header-controls {
+  display: flex;
+  gap: 5px;
 }
 
 .popup-header h3 {
@@ -32,18 +38,15 @@
   font-weight: bold;
 }
 
-.close-btn {
-  background: none;
+.collapse-btn, .close-btn {
+  background: rgba(255, 255, 255, 0.2);
   border: none;
   color: white;
-  font-size: 18px;
+  font-size: 16px;
   cursor: pointer;
-  padding: 0;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 3px;
+  line-height: 1;
 }
 
 .close-btn:hover {
@@ -99,4 +102,12 @@
   40% { content: '..'; }
   60% { content: '...'; }
   80%, 100% { content: ''; }
+}
+
+.popup-content {
+  cursor: pointer;
+}
+
+.collapse-btn:hover, .close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
 }

@@ -5,25 +5,6 @@ window.addEventListener('load', function() {
   setTimeout(initializeExtension, 5000);
 });
 
-setTimeout(() => {
-  if (document.body.contains(popup)) {
-    popup.remove();
-  }
-}, 5000);
-
-popup.addEventListener('mouseenter', function() {
-  this.style.opacity = '1';
-});
-
-popup.addEventListener('mouseleave', function() {
-  this.style.opacity = '0.7';
-  // Optional: remove on mouseleave after short delay
-  setTimeout(() => {
-    if (document.body.contains(this)) {
-      this.remove();
-    }
-  }, 500);
-});
 
 let lastUrl = location.href;
 
@@ -75,7 +56,10 @@ function createPopup(summaryText, emailCount = 0, isLoading = false) {
     <div class="popup-content">
       <div class="popup-header">
         <h3>${headerText}</h3>
-        <button class="close-btn">&times;</button>
+        <div class="header-controls">
+          <button class="collapse-btn" title="Collapse">−</button>
+          <button class="close-btn" title="Close">&times;</button>
+        </div>
       </div>
       <div class="popup-body">
         ${isLoading ? 
@@ -92,13 +76,41 @@ function createPopup(summaryText, emailCount = 0, isLoading = false) {
   document.body.appendChild(popup);
   
   const closeBtn = popup.querySelector('.close-btn');
-  closeBtn.addEventListener('click', function() {
+  const collapseBtn = popup.querySelector('.collapse-btn');
+  const popupBody = popup.querySelector('.popup-body');
+  
+  // Close functionality
+  closeBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
     popup.remove();
   });
   
-  // ADD HOVER FUNCTIONALITY HERE
-  popup.addEventListener('mouseenter', function() {
+  // Collapse/Expand functionality
+  collapseBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const isCollapsed = popupBody.style.display === 'none';
+    
+    if (isCollapsed) {
+      // Expand
+      popupBody.style.display = 'block';
+      collapseBtn.textContent = '−';
+      collapseBtn.title = 'Collapse';
+    } else {
+      // Collapse
+      popupBody.style.display = 'none';
+      collapseBtn.textContent = '+';
+      collapseBtn.title = 'Expand';
+    }
+  });
+  
+  // Click anywhere on popup to close (optional)
+  popup.addEventListener('click', function() {
     this.remove();
+  });
+  
+  // Prevent clicks inside content from closing
+  popup.querySelector('.popup-content').addEventListener('click', function(e) {
+    e.stopPropagation();
   });
   
   if (!isLoading) {
@@ -106,7 +118,7 @@ function createPopup(summaryText, emailCount = 0, isLoading = false) {
       if (document.body.contains(popup)) {
         popup.remove();
       }
-    }, 5000);
+    }, 20000);
   }
 }
 
