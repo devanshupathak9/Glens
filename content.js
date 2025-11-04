@@ -1,6 +1,28 @@
 // Wait for the page to load
+
+
 window.addEventListener('load', function() {
-  setTimeout(initializeExtension, 4000); // Increased delay for Gmail to fully load
+  setTimeout(initializeExtension, 5000);
+});
+
+setTimeout(() => {
+  if (document.body.contains(popup)) {
+    popup.remove();
+  }
+}, 5000);
+
+popup.addEventListener('mouseenter', function() {
+  this.style.opacity = '1';
+});
+
+popup.addEventListener('mouseleave', function() {
+  this.style.opacity = '0.7';
+  // Optional: remove on mouseleave after short delay
+  setTimeout(() => {
+    if (document.body.contains(this)) {
+      this.remove();
+    }
+  }, 500);
 });
 
 let lastUrl = location.href;
@@ -34,6 +56,58 @@ function initializeExtension() {
     console.error('Error extracting emails:', error);
     createPopup('Having trouble accessing your emails. Make sure you\'re on Gmail and try refreshing the page.');
   });
+}
+
+function createPopup(summaryText, emailCount = 0, isLoading = false) {
+  const existingPopup = document.getElementById('gmail-summary-popup');
+  if (existingPopup) {
+    existingPopup.remove();
+  }
+  
+  const popup = document.createElement('div');
+  popup.id = 'gmail-summary-popup';
+  
+  const headerText = isLoading ? 
+    '🤖 Analyzing Emails...' : 
+    (emailCount > 0 ? `🤖 Gmail Summary (${emailCount} emails)` : '🤖 Gmail Summary');
+  
+  popup.innerHTML = `
+    <div class="popup-content">
+      <div class="popup-header">
+        <h3>${headerText}</h3>
+        <button class="close-btn">&times;</button>
+      </div>
+      <div class="popup-body">
+        ${isLoading ? 
+          '<div class="loading">Scanning your emails for important events...</div>' : 
+          `<div class="summary-content">${formatSummary(summaryText)}</div>
+           <div class="popup-footer">
+             <small>Powered by Gemini Nano • ${new Date().toLocaleTimeString()}</small>
+           </div>`
+        }
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(popup);
+  
+  const closeBtn = popup.querySelector('.close-btn');
+  closeBtn.addEventListener('click', function() {
+    popup.remove();
+  });
+  
+  // ADD HOVER FUNCTIONALITY HERE
+  popup.addEventListener('mouseenter', function() {
+    this.remove();
+  });
+  
+  if (!isLoading) {
+    setTimeout(() => {
+      if (document.body.contains(popup)) {
+        popup.remove();
+      }
+    }, 5000);
+  }
 }
 
 function extractImportantEmails() {
@@ -231,53 +305,6 @@ DATE: ${email.date}
 PREVIEW: ${email.snippet}
 ---`
   ).join('\n');
-}
-
-function createPopup(summaryText, emailCount = 0, isLoading = false) {
-  const existingPopup = document.getElementById('gmail-summary-popup');
-  if (existingPopup) {
-    existingPopup.remove();
-  }
-  
-  const popup = document.createElement('div');
-  popup.id = 'gmail-summary-popup';
-  
-  const headerText = isLoading ? 
-    '🤖 Analyzing Emails...' : 
-    (emailCount > 0 ? `🤖 Gmail Summary (${emailCount} emails)` : '🤖 Gmail Summary');
-  
-  popup.innerHTML = `
-    <div class="popup-content">
-      <div class="popup-header">
-        <h3>${headerText}</h3>
-        <button class="close-btn">&times;</button>
-      </div>
-      <div class="popup-body">
-        ${isLoading ? 
-          '<div class="loading">Scanning your emails for important events...</div>' : 
-          `<div class="summary-content">${formatSummary(summaryText)}</div>
-           <div class="popup-footer">
-             <small>Powered by Gemini Nano • ${new Date().toLocaleTimeString()}</small>
-           </div>`
-        }
-      </div>
-    </div>
-  `;
-  
-  document.body.appendChild(popup);
-  
-  const closeBtn = popup.querySelector('.close-btn');
-  closeBtn.addEventListener('click', function() {
-    popup.remove();
-  });
-  
-  if (!isLoading) {
-    setTimeout(() => {
-      if (document.body.contains(popup)) {
-        popup.remove();
-      }
-    }, 30000);
-  }
 }
 
 function formatSummary(text) {
