@@ -8,9 +8,10 @@ let lastUrl = location.href;
 function getCurrentView() {
   if (lastUrl.endsWith('#inbox') || lastUrl.endsWith('/#inbox')) {
     return 'INBOX_VIEW';
-  } else {
+  } else if (url.includes('/#inbox/') || url.includes('/mail/u/') && url.includes('#inbox')) {
     return 'EMAIL_VIEW';
   }
+return 'NO_ACTION';
 }
 
 
@@ -19,6 +20,10 @@ function initializeExtension() {
 
   const currentView = getCurrentView();
   console.log('Current view:', currentView);
+  if (currentView === 'NO_ACTION') {
+    console.log('🚫 Not a Gmail inbox/email page - skipping extension');
+    return;
+  }
 
   extractImportantEmails(currentView).then(emailData => {
     console.log('📧 Emails found:', emailData);
