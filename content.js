@@ -8,10 +8,9 @@ let lastUrl = location.href;
 function getCurrentView() {
   if (lastUrl.endsWith('#inbox') || lastUrl.endsWith('/#inbox')) {
     return 'INBOX_VIEW';
-  } else if (url.includes('/#inbox/') || url.includes('/mail/u/') && url.includes('#inbox')) {
+  } else {
     return 'EMAIL_VIEW';
   }
-return 'NO_ACTION';
 }
 
 
