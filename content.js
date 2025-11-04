@@ -1,6 +1,3 @@
-// Wait for the page to load
-
-
 window.addEventListener('load', function() {
   setTimeout(initializeExtension, 5000);
 });
